@@ -1,20 +1,36 @@
-[build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "pattern-deleter"
-version = "0.1.0"
-description = "A CLI utility to recursively delete files matching a specific pattern."
-authors = [
-    { name = "Ken" }
-]
-requires-python = ">=3.9"
-dependencies = [
-    "loguru>=0.7.2"
-]
+name = "packtools"
+version = "1.0.0"
+description = "Personal CLI utilities: file comparison, archiving, tree views, and manifest checking."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
 
 [project.scripts]
-# This exposes the tool to your terminal. 
-# Format: "command-name = module_name:function_name"
-delete-pattern = "delete_pattern:main"
+# Directory comparison
+compare-folders = "packtools.dir_compare:main"
+
+# Codebase archiving / LLM context packing
+filepack = "packtools.filepack:main"
+flpk     = "packtools.filepack:main"
+
+# Directory tree viewer
+filtered-tree = "packtools.filtered_tree:main"
+
+# Bulk file/folder deletion
+delete-pattern = "packtools.delete_pattern:main"
+
+# Manifest integrity tools
+manifest-check = "packtools.manifest_check:main"
+verify-install = "packtools.verify_install:main"
+generate-manifest = "packtools.generate_manifest:main"
+
+[build-system]
+requires      = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["packtools*"]
