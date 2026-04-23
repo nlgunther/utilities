@@ -28,7 +28,7 @@ import zipfile
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from packtools.filtered_tree import build_tree, IGNORED_DIRS
+from packtools.filtered_tree import build_filtered_tree, IGNORED_DIRS
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def cmd_flatten(input_path: str, regex: str, output_dir: str) -> int:
     dest.mkdir(parents=True, exist_ok=True)
 
     pattern     = re.compile(regex)
-    tree_diagram = f"{base.name}/\n" + build_tree(base, pattern)
+    tree_diagram = build_filtered_tree(base, pattern)
     (dest / "directory_map.txt").write_text(tree_diagram, encoding="utf-8")
     log.debug("Directory map:\n%s", tree_diagram)
 
