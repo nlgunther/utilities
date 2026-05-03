@@ -9,6 +9,9 @@ dependencies = []
 test = ["pytest"]
 
 [project.scripts]
+# Signature / hash comparison
+signature-compare = "signature_compare.compare:main"
+
 # Directory comparison
 compare-folders = "packtools.dir_compare:main"
 
@@ -33,4 +36,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["packtools*"]
+include = ["packtools*", "signature_compare*"]

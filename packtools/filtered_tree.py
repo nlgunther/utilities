@@ -57,8 +57,6 @@ def _render_tree(root: Path, paths: list[Path]) -> str:
         _render_tree(Path("src"), [Path("src/a.py"), Path("src/sub/b.py")])
         # → "├── a.py\\n└── sub/\\n    └── b.py\\n"
     """
-    # Group paths by their parent directory, relative to root.
-    # dir_children[rel_dir] = sorted list of (is_file, name, full_path) tuples
     from collections import defaultdict
     dir_children: dict[Path, list[tuple[bool, str, Path]]] = defaultdict(list)
 
@@ -78,7 +76,7 @@ def _render_tree(root: Path, paths: list[Path]) -> str:
         parent = Path(*parts[:-1]) if len(parts) > 1 else Path(".")
         dir_children[parent].append((True, parts[-1], p))
 
-    # Deduplicate while preserving insertion order isn't needed — sort instead.
+    # Deduplicate and sort: dirs first, then files, both alphabetically.
     for key in dir_children:
         seen = set()
         deduped = []
@@ -86,7 +84,6 @@ def _render_tree(root: Path, paths: list[Path]) -> str:
             if entry not in seen:
                 seen.add(entry)
                 deduped.append(entry)
-        # Dirs first, then files, both alphabetically.
         dir_children[key] = sorted(deduped, key=lambda e: (e[0], e[1].lower()))
 
     def _render(rel_dir: Path, prefix: str) -> str:
@@ -107,17 +104,18 @@ def _render_tree(root: Path, paths: list[Path]) -> str:
     return (body + "\n") if body else ""
 
 
-def build_filtered_tree(directory: Path, pattern: re.Pattern) -> str:
+def build_tree(directory: Path, pattern: re.Pattern) -> str:
     """
     Return a full ASCII tree string for files under directory matching pattern.
+    Returns "" when no files match (callers can treat as falsy).
 
     Example:
-        build_filtered_tree(Path("."), re.compile(r"\\.py$"))
+        build_tree(Path("."), re.compile(r"\\.py$"))
         # → ".\\n├── cli.py\\n└── lib/\\n    └── utils.py\\n"
     """
     matches = _collect_matches(directory, pattern)
     if not matches:
-        return f"{directory.name}/\n(no matches)\n"
+        return ""
     return f"{directory.name}/\n" + _render_tree(directory, matches)
 
 
@@ -142,7 +140,11 @@ def main() -> None:
         print(f"Error: Invalid regex: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    output = build_filtered_tree(args.directory, pattern)
+    output = build_tree(args.directory, pattern)
+
+    if not output:
+        print(f"(no files matched '{args.regex}')")
+        sys.exit(0)
 
     if args.out:
         args.out.write_text(output, encoding="utf-8")

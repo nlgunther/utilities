@@ -245,3 +245,72 @@ class TestVerifyInstall:
         from packtools.verify_install import verify
         monkeypatch.chdir(dummy_manifest)
         verify(str(dummy_manifest / "MANIFEST.txt"))   # no exception → pass
+
+
+# ===========================================================================
+# signature_compare
+# ===========================================================================
+
+class TestSignatureCompare:
+    def test_compute_signatures_known_hash(self, tmp_path):
+        """Hash of a written file matches direct sha16 call on the same bytes."""
+        from packtools._hashing import sha16
+        from signature_compare.compare import compute_signatures
+        f = tmp_path / "hello.py"
+        f.write_bytes(b"hello\n")
+        sigs = compute_signatures([str(f)])
+        assert sigs[str(f)] == sha16(b"hello\n")
+
+    def test_compute_signatures_missing_file(self):
+        """An unreadable path produces an ERROR entry rather than raising."""
+        from signature_compare.compare import compute_signatures
+        sigs = compute_signatures(["/nonexistent/ghost.py"])
+        assert list(sigs.values())[0].startswith("ERROR")
+
+    def test_find_collisions_detected(self, tmp_path):
+        """Two paths with identical content appear in the collision map."""
+        from signature_compare.compare import compute_signatures, find_collisions
+        f1 = tmp_path / "a.py"
+        f2 = tmp_path / "b.py"
+        f1.write_bytes(b"same content")
+        f2.write_bytes(b"same content")
+        sigs = compute_signatures([str(f1), str(f2)])
+        assert len(find_collisions(sigs)) == 1
+
+    def test_find_collisions_none(self, tmp_path):
+        """Two paths with different content produce no collisions."""
+        from signature_compare.compare import compute_signatures, find_collisions
+        f1 = tmp_path / "a.py"
+        f2 = tmp_path / "b.py"
+        f1.write_bytes(b"content a")
+        f2.write_bytes(b"content b")
+        sigs = compute_signatures([str(f1), str(f2)])
+        assert find_collisions(sigs) == {}
+
+    def test_find_collisions_excludes_errors(self):
+        """ERROR entries are not grouped as collisions with each other."""
+        from signature_compare.compare import find_collisions
+        sigs = {"missing1.py": "ERROR(No such file)", "missing2.py": "ERROR(No such file)"}
+        assert find_collisions(sigs) == {}
+
+    def test_format_report_shows_collision(self, tmp_path):
+        """format_report includes the COLLISIONS section when hashes match."""
+        from signature_compare.compare import compute_signatures, find_collisions, format_report
+        f1 = tmp_path / "a.py"
+        f2 = tmp_path / "b.py"
+        f1.write_bytes(b"twin")
+        f2.write_bytes(b"twin")
+        sigs = compute_signatures([str(f1), str(f2)])
+        report = format_report(sigs, find_collisions(sigs))
+        assert "COLLISIONS" in report
+
+    def test_format_report_all_unique(self, tmp_path):
+        """format_report says 'All signatures are unique' when no collisions."""
+        from signature_compare.compare import compute_signatures, find_collisions, format_report
+        f1 = tmp_path / "a.py"
+        f2 = tmp_path / "b.py"
+        f1.write_bytes(b"alpha")
+        f2.write_bytes(b"beta")
+        sigs = compute_signatures([str(f1), str(f2)])
+        report = format_report(sigs, find_collisions(sigs))
+        assert "All signatures are unique" in report
